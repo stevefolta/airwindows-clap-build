@@ -1,0 +1,77 @@
+#!/usr/bin/env sqs
+
+airwindows-sources = nil
+
+fn main
+	read-settings("~/.config/build-airwindows-claps/settings")
+	read-settings("settings")
+	setup
+	if !airwindows-sources
+		fail('Configure "airwindows-sources" in your "settings" file.')
+	add-plugin("Capacitor2")
+	add-plugin("Reverb")
+	build-all
+
+
+plugins = []
+
+string-setting-re = Regex(r'[[:space:]]*(?P<name>[[:alnum:]-]+)[[:space:]]*=[[:space:]]*"(?P<value>[^"]*)"')
+
+fn read-settings(path)
+	path = Path(path)
+	if !path.is-file
+		return
+	with file = File(path)
+		for line: file.lines
+			match = string-setting-re.match(line)
+			if !match
+				continue
+			if match["name"] == "airwindows-sources"
+				airwindows-sources = match["value"]
+
+cxx = nil
+c-flags = [ "-I." "-fPIC" "-Wno-multichar" "-Wfatal-errors" ]
+
+fn setup
+	$ mkdir -p sources build
+	cxx = env["CXX"] || "c++"
+
+# Each Airwindows plugin wants to dump some of the same variables into the
+# global namespace, so we wrap each one in its own namespace.
+
+cpp-template = r'/* NAME_CLAP.cpp */
+
+namespace NAME {
+#include "SRC_DIR/NAME.h"
+#include "SRC_DIR/NAME.cpp"
+}
+
+AudioEffectX* create_NAME(audioMasterCallback callback) { return new NAME(callback); }
+'
+
+fn add-plugin(name)
+	src-dir = Path("{airwindows-sources}/plugins/LinuxVST/src/{name}").string
+	if !Path(src-dir).is-dir
+		fail("Couldn't find source: {name}")
+
+	with file = File("sources/{name}_CLAP.cpp", "w")
+		file.write(cpp-template.replace("SRC_DIR", src-dir).replace("NAME", name))
+
+	plugins.append(name)
+
+fn build-all
+	object-files = []
+	for name: plugins
+		object-file = "build/{name}_CLAP.o"
+		$ {cxx} -c {c-flags} "sources/{name}_CLAP.cpp" -o {object-file} || {fail()}
+		object-files.append(object-file)
+	for name: [ "AudioEffectX" ]
+		object-file = "build/{name}.o"
+		$ {cxx} -c "{name}.cpp" {c-flags} -o {object-file} || {fail()}
+		object-files.append(object-file)
+	$ {cxx} {object-files} -shared -o "Airwindows.clap"
+
+
+main()
+
+
