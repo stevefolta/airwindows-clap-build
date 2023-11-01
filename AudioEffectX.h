@@ -83,6 +83,8 @@ class AudioEffectX {
 		double sample_rate = 44100;
 
 		static void float2string(double value, char* dest, int size);
+		static void int2string(VstInt32 value, char* dest, int size);
+		static void dB2string(double value, char* dest, int size);
 
 		void process_event(const clap_event_header_t* event);
 	};

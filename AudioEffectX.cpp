@@ -2,12 +2,25 @@
 
 #include <vector>
 #include <stdio.h>
+#include <math.h>
 
 
 void AudioEffectX::float2string(double value, char* dest, int size)
 {
 	snprintf(dest, size, "%g", value);
 }
+
+void AudioEffectX::int2string(VstInt32 value, char* dest, int size)
+{
+	snprintf(dest, size, "%d", value);
+}
+
+void AudioEffectX::dB2string(double value, char* dest, int size)
+{
+	// Is this right?  Why can't Wikipedia tell us what a digital dB is?
+	snprintf(dest, size, "%g", 20 * log10(value));
+}
+
 
 
 static const char* const default_features[] = {
