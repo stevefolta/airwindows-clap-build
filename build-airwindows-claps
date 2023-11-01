@@ -6,12 +6,16 @@ file-ext-re = Regex(r'^(?P<root>.*)\.(?P<ext>[[:alnum:]]+)$')
 
 fn main
 	only = []
+	except = []
 	which_arg = 1
 	while which_arg < argv.size
 		arg = argv[which_arg]
 		which_arg += 1
 		if arg == "only:"
 			only.append(argv[which_arg])
+			which_arg += 1
+		else if arg == "except:"
+			except.append(argv[which_arg])
 			which_arg += 1
 
 	read-settings("~/.config/build-airwindows-claps/settings")
@@ -25,6 +29,8 @@ fn main
 			continue
 		name = Path(dir).basename
 		if only.size > 0 && !only.contains(name)
+			continue
+		if except.contains(name)
 			continue
 		add-plugin(name)
 	build-all
