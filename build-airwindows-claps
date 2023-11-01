@@ -2,14 +2,31 @@
 
 airwindows-sources = nil
 
+file-ext-re = Regex(r'^(?P<root>.*)\.(?P<ext>[[:alnum:]]+)$')
+
 fn main
+	only = []
+	which_arg = 1
+	while which_arg < argv.size
+		arg = argv[which_arg]
+		which_arg += 1
+		if arg == "only:"
+			only.append(argv[which_arg])
+			which_arg += 1
+
 	read-settings("~/.config/build-airwindows-claps/settings")
 	read-settings("settings")
 	setup
 	if !airwindows-sources
 		fail('Configure "airwindows-sources" in your "settings" file.')
-	add-plugin("Capacitor2")
-	add-plugin("Reverb")
+	airwindows-sources = Path(airwindows-sources).string
+	for dir: glob("{airwindows-sources}/plugins/LinuxVST/src/*")
+		if !Path(dir).is-dir
+			continue
+		name = Path(dir).basename
+		if only.size > 0 && !only.contains(name)
+			continue
+		add-plugin(name)
 	build-all
 
 
@@ -41,6 +58,8 @@ create-effect-instance-re = Regex(r'createEffectInstance\(')
 cpp-template = r'/* NAME_CLAP.cpp */
 
 #include "SRC_DIR/NAME.h"
+#define createEffectInstance createEffectInstance_NAME
+#include "SRC_DIR/NAME.cpp"
 
 AudioEffectX* create_NAME() { return new NAME(nullptr); }
 '
@@ -50,22 +69,11 @@ fn add-plugin(name)
 	if !Path(src-dir).is-dir
 		fail("Couldn't find source: {name}")
 
-	# Copy Plugin.cpp, with changes.
-	with in-file = File("{src-dir}/{name}.cpp")
-		with out-file = File("sources/{name}.cpp", "w")
-			for line: in-file.lines
-				if create-effect-instance-re.match(line)
-					continue
-				out-file.write(line)
-				out-file.write("\n")
-
 	# Make Plugin_CLAP.cpp.
 	with file = File("sources/{name}_CLAP.cpp", "w")
 		file.write(cpp-template.replace("SRC_DIR", src-dir).replace("NAME", name))
 
 	plugins.append(name)
-
-file-ext-re = Regex(r'^(?P<root>.*)\.(?P<ext>[[:alnum:]]+)$')
 
 fn build-all
 	object-files = []
@@ -86,8 +94,6 @@ fn build-all
 	# The plugins.
 	src-dir = Path("{airwindows-sources}/plugins/LinuxVST/src").string
 	for name: plugins
-		# Plugin.cpp.
-		compile("sources/{name}.cpp", [ "-I{src-dir}/{name}" ])
 		# PluginProc.cpp.
 		compile("{src-dir}/{name}/{name}Proc.cpp", [ "-I{src-dir}/{name}" ])
 		# Plugin_CLAP.cpp.
