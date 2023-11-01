@@ -102,8 +102,13 @@ clap_process_status AudioEffectX::process(const clap_process_t* process)
 
 void AudioEffectX::process_event(const clap_event_header_t* event)
 {
-	//*** TODO: handle parameter change events.
-	/***/
+	if (event->space_id != CLAP_CORE_EVENT_SPACE_ID)
+		return;
+
+	if (event->type == CLAP_EVENT_PARAM_VALUE) {
+		auto param_event = (const clap_event_param_value_t*) event;
+		setParameter(param_event->param_id, param_event->value);
+		}
 }
 
 
