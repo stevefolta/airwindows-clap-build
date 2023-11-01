@@ -71,7 +71,6 @@ void AudioEffectX::stop_processing()
 
 void AudioEffectX::reset()
 {
-	/***/
 }
 
 
@@ -185,9 +184,12 @@ static const clap_plugin_params_t params_extension = {
 		return true;
 		},
 	.value_to_text = [](const clap_plugin_t* clap_plugin, clap_id param_id, double value, char* out, uint32_t capacity) -> bool {
-		// Not quite right; getParameterDisplay() will get the plugin's current
-		// value, not "value".
-		AudioEffectX::of(clap_plugin)->getParameterDisplay(param_id, out);
+		// getParameterDisplay() will get the plugin's current value, instead of
+		// letting you pass a value in.
+		auto plugin = AudioEffectX::of(clap_plugin);
+		if (value != plugin->getParameter(param_id))
+			return false;
+		plugin->getParameterDisplay(param_id, out);
 		return true;
 		},
 	.text_to_value = [](const clap_plugin_t* clap_plugin, clap_id param_id, const char* value_text, double* value_out) -> bool {
@@ -288,7 +290,6 @@ const void* AudioEffectX::get_extension(const char* id)
 
 void AudioEffectX::main_thread_tick()
 {
-	/***/
 }
 
 
