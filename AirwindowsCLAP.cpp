@@ -2,13 +2,14 @@
 #include "AudioEffectX.h"
 #include "clap/clap.h"
 #include <stdlib.h>
+#include <iostream>
 
 
 static std::set<std::string> interned_strings;
 
 clap_plugin_descriptor_t* PluginEntry::get_descriptor()
 {
-	if (!descriptor) {
+	if (descriptor == nullptr) {
 		auto plugin = create();
 		descriptor = (clap_plugin_descriptor_t*) malloc(sizeof(clap_plugin_descriptor_t));
 		memset(descriptor, 0, sizeof(clap_plugin_descriptor_t));
@@ -52,7 +53,7 @@ const clap_plugin_t* create_plugin(const clap_plugin_factory_t* factory, const c
 {
 	for (auto& entry: plugins) {
 		auto descriptor = entry.get_descriptor();
-		if (strcmp(plugin_id, descriptor->id)) {
+		if (strcmp(plugin_id, descriptor->id) == 0) {
 			auto plugin = entry.create();
 			plugin->clap_plugin = clap_plugin_template;
 			plugin->clap_plugin.desc = descriptor;
@@ -99,4 +100,11 @@ extern "C" const clap_plugin_entry_t clap_entry = {
 		return nullptr;
 		},
 	};
+
+#ifdef DEBUG_UNLOADING
+extern "C" __attribute__((destructor)) void at_unload()
+{
+  std::cerr << "- Unloading." << std::endl << std::endl;
+}
+#endif
 

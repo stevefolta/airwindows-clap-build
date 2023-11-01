@@ -247,6 +247,10 @@ bool AudioEffectX::load_state(const clap_istream_t* stream)
 		chunk.insert(chunk.end(), buffer.begin(), std::next(buffer.begin(), bytes_read));
 		}
 
+	// Airwindows plugs don't check the size of the data (they don't trust it).
+	// The validator requires that a size of zero return false anyway.
+	if (chunk.size() == 0)
+		return false;
 	setChunk(chunk.data(), chunk.size(), false);
 	return true;
 }
