@@ -48,10 +48,14 @@ fn read-settings(path)
 
 cxx = nil
 c-flags = [ "-I." "-fPIC" "-Wno-multichar" "-Wfatal-errors" ]
+num-cores = nil
+compile-queue = CompileQueue()
 
 fn setup
 	$ mkdir -p sources build
 	cxx = env["CXX"] || "c++"
+	if !num-cores
+		num-cores = Int($(nproc))
 
 create-effect-instance-re = Regex(r'createEffectInstance\(')
 
@@ -82,9 +86,10 @@ fn build-all
 		if extra-c-flags
 			our-c-flags += extra-c-flags
 		name = file-ext-re.match(Path(c-source).basename)['root']
-		print("Compiling {name}.cpp...")
 		object-file = "build/{name}.o"
-		$ {cxx} -c {c-source} {our-c-flags} -o {object-file} || {fail()}
+		# print("Compiling {name}.cpp...")
+		# $ {cxx} -c {c-source} {our-c-flags} -o {object-file} || {fail()}
+		compile-queue.append([ cxx "-c" c-source ] + our-c-flags + [ "-o" object-file ], "Compiling {name}.cpp...")
 		object-files.append(object-file)
 
 	# The framework.
@@ -114,9 +119,60 @@ fn build-all
 	# Compile it.
 	compile("sources/Plugins_vector.cpp")
 
+	compile-queue.run-all()
+
 	print("Linking...")
 	$ {cxx} {object-files} -shared -o "Airwindows.clap"
 
+class CompileQueue
+	(pending running)
+
+	class Entry
+		(command message)
+		init(command-in, message-in)
+			command = command-in
+			message = message-in
+	
+	init
+		pending = []
+		running = []
+	append(command, message)
+		pending.append(Entry(command, message))
+	run-all
+		# Start initial commands.
+		while pending.size > 0 && running.size < num-cores
+			entry = pending.pop-front
+			if entry.message
+				print(entry.message)
+			process = run(entry.command, { wait: false })
+			running.append(process)
+
+		# Keep it going.
+		while true
+			all-done = true
+			i = 0
+			while i < running.size
+				process = running[i]
+				if process
+					if process.is-done
+						if !process.ok
+							fail()
+						# Start a new one.
+						if pending.size > 0
+							entry = pending.pop-front
+							if entry.message
+								print(entry.message)
+							running[i] = run(entry.command, { wait: false })
+							all-done = false
+					else
+						all-done = false
+				i += 1
+			if all-done
+				break
+			# We ought to sleep a little here, and not just spin consuming CPU, but
+			# sqs won't let us sleep for less then a second, and that's too long to
+			# wait.
+			# sleep(1)
 
 main()
 
