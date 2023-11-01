@@ -41,7 +41,7 @@ class AudioEffectX {
 		virtual void processDoubleReplacing(double** inputs, double** outputs, VstInt32 sampleFrames) = 0;
 		virtual VstInt32 getChunk(void** data, bool isPreset) { return 0; }
 		virtual VstInt32 setChunk(void* data, VstInt32 byteSize, bool isPreset) { return 0; }
-		virtual void setParameter(VstInt32 index, float value);
+		virtual void setParameter(VstInt32 index, float value) {}
 		virtual float getParameter(VstInt32 index) { return 0.0; }
 		virtual void getParameterName(VstInt32 index, char* text) { text[0] = 0; }
 		virtual void getParameterDisplay(VstInt32 index, char* text) { text[0] = 0; }
