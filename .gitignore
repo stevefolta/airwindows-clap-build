@@ -1,4 +1,5 @@
 settings
 sources
 build
+*.clap
 

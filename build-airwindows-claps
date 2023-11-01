@@ -36,15 +36,11 @@ fn setup
 	$ mkdir -p sources build
 	cxx = env["CXX"] || "c++"
 
-# Each Airwindows plugin wants to dump some of the same variables into the
-# global namespace, so we wrap each one in its own namespace.
+create-effect-instance-re = Regex(r'createEffectInstance\(')
 
 cpp-template = r'/* NAME_CLAP.cpp */
 
-namespace NAME {
 #include "SRC_DIR/NAME.h"
-#include "SRC_DIR/NAME.cpp"
-}
 
 AudioEffectX* create_NAME(audioMasterCallback callback) { return new NAME(callback); }
 '
@@ -54,21 +50,48 @@ fn add-plugin(name)
 	if !Path(src-dir).is-dir
 		fail("Couldn't find source: {name}")
 
+	# Copy Plugin.cpp, with changes.
+	with in-file = File("{src-dir}/{name}.cpp")
+		with out-file = File("sources/{name}.cpp", "w")
+			for line: in-file.lines
+				if create-effect-instance-re.match(line)
+					continue
+				out-file.write(line)
+				out-file.write("\n")
+
+	# Make Plugin_CLAP.cpp.
 	with file = File("sources/{name}_CLAP.cpp", "w")
 		file.write(cpp-template.replace("SRC_DIR", src-dir).replace("NAME", name))
 
 	plugins.append(name)
 
 fn build-all
+	src-dir = Path("{airwindows-sources}/plugins/LinuxVST/src").string
 	object-files = []
 	for name: plugins
+		# Plugin.cpp.
+		print("Compiling {name}.cpp...")
+		object-file = "build/{name}.o"
+		$ {cxx} -c {c-flags} "-I{src-dir}/{name}" "sources/{name}.cpp" -o {object-file} || {fail()}
+		object-files.append(object-file)
+		# PluginProc.cpp.
+		print("Compiling {name}Proc.cpp...")
+		object-file = "build/{name}Proc.o"
+		$ {cxx} -c {c-flags} "-I{src-dir}/{name}" "{src-dir}/{name}/{name}Proc.cpp" -o {object-file} || {fail()}
+		object-files.append(object-file)
+		# Plugin_CLAP.cpp.
+		print("Compiling {name}_CLAP.cpp...")
 		object-file = "build/{name}_CLAP.o"
 		$ {cxx} -c {c-flags} "sources/{name}_CLAP.cpp" -o {object-file} || {fail()}
 		object-files.append(object-file)
-	for name: [ "AudioEffectX" ]
+
+	for name: [ "AudioEffectX" "AirwindowsCLAP" ]
+		print("Compiling {name}.cpp...")
 		object-file = "build/{name}.o"
 		$ {cxx} -c "{name}.cpp" {c-flags} -o {object-file} || {fail()}
 		object-files.append(object-file)
+
+	print("Linking...")
 	$ {cxx} {object-files} -shared -o "Airwindows.clap"
 
 
