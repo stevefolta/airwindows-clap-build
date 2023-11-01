@@ -66,8 +66,17 @@ fn add-plugin(name)
 	plugins.append(name)
 
 fn build-all
-	src-dir = Path("{airwindows-sources}/plugins/LinuxVST/src").string
 	object-files = []
+
+	# The framework.
+	for name: [ "AudioEffectX" "AirwindowsCLAP" ]
+		print("Compiling {name}.cpp...")
+		object-file = "build/{name}.o"
+		$ {cxx} -c "{name}.cpp" {c-flags} -o {object-file} || {fail()}
+		object-files.append(object-file)
+
+	# The plugins.
+	src-dir = Path("{airwindows-sources}/plugins/LinuxVST/src").string
 	for name: plugins
 		# Plugin.cpp.
 		print("Compiling {name}.cpp...")
@@ -83,12 +92,6 @@ fn build-all
 		print("Compiling {name}_CLAP.cpp...")
 		object-file = "build/{name}_CLAP.o"
 		$ {cxx} -c {c-flags} "sources/{name}_CLAP.cpp" -o {object-file} || {fail()}
-		object-files.append(object-file)
-
-	for name: [ "AudioEffectX" "AirwindowsCLAP" ]
-		print("Compiling {name}.cpp...")
-		object-file = "build/{name}.o"
-		$ {cxx} -c "{name}.cpp" {c-flags} -o {object-file} || {fail()}
 		object-files.append(object-file)
 
 	print("Linking...")
