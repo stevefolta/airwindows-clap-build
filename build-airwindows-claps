@@ -42,7 +42,7 @@ cpp-template = r'/* NAME_CLAP.cpp */
 
 #include "SRC_DIR/NAME.h"
 
-AudioEffectX* create_NAME(audioMasterCallback callback) { return new NAME(callback); }
+AudioEffectX* create_NAME() { return new NAME(nullptr); }
 '
 
 fn add-plugin(name)
@@ -65,34 +65,48 @@ fn add-plugin(name)
 
 	plugins.append(name)
 
+file-ext-re = Regex(r'^(?P<root>.*)\.(?P<ext>[[:alnum:]]+)$')
+
 fn build-all
 	object-files = []
+	fn compile(c-source, extra-c-flags)
+		our-c-flags = c-flags
+		if extra-c-flags
+			our-c-flags += extra-c-flags
+		name = file-ext-re.match(Path(c-source).basename)['root']
+		print("Compiling {name}.cpp...")
+		object-file = "build/{name}.o"
+		$ {cxx} -c {c-source} {our-c-flags} -o {object-file} || {fail()}
+		object-files.append(object-file)
 
 	# The framework.
 	for name: [ "AudioEffectX" "AirwindowsCLAP" ]
-		print("Compiling {name}.cpp...")
-		object-file = "build/{name}.o"
-		$ {cxx} -c "{name}.cpp" {c-flags} -o {object-file} || {fail()}
-		object-files.append(object-file)
+		compile("{name}.cpp")
 
 	# The plugins.
 	src-dir = Path("{airwindows-sources}/plugins/LinuxVST/src").string
 	for name: plugins
 		# Plugin.cpp.
-		print("Compiling {name}.cpp...")
-		object-file = "build/{name}.o"
-		$ {cxx} -c {c-flags} "-I{src-dir}/{name}" "sources/{name}.cpp" -o {object-file} || {fail()}
-		object-files.append(object-file)
+		compile("sources/{name}.cpp", [ "-I{src-dir}/{name}" ])
 		# PluginProc.cpp.
-		print("Compiling {name}Proc.cpp...")
-		object-file = "build/{name}Proc.o"
-		$ {cxx} -c {c-flags} "-I{src-dir}/{name}" "{src-dir}/{name}/{name}Proc.cpp" -o {object-file} || {fail()}
-		object-files.append(object-file)
+		compile("{src-dir}/{name}/{name}Proc.cpp", [ "-I{src-dir}/{name}" ])
 		# Plugin_CLAP.cpp.
-		print("Compiling {name}_CLAP.cpp...")
-		object-file = "build/{name}_CLAP.o"
-		$ {cxx} -c {c-flags} "sources/{name}_CLAP.cpp" -o {object-file} || {fail()}
-		object-files.append(object-file)
+		compile("sources/{name}_CLAP.cpp")
+
+	# The vector of plugins.
+	with file = File("sources/Plugins_vector.cpp", "w")
+		file.write('#include "AirwindowsCLAP.h"\n')
+		file.write('\n')
+		for name: plugins
+			file.write('extern AudioEffectX* create_{name}();\n')
+		file.write('\n')
+		file.write('std::vector<PluginEntry> plugins = {{\n')
+		for name: plugins
+			file.write('\t{{ .create = create_{name}, }},\n')
+		file.write('\t}};\n')
+		file.write('\n')
+	# Compile it.
+	compile("sources/Plugins_vector.cpp")
 
 	print("Linking...")
 	$ {cxx} {object-files} -shared -o "Airwindows.clap"
