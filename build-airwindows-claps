@@ -1,6 +1,7 @@
 #!/usr/bin/env sqs
 
 airwindows-sources = nil
+debug-unloading = false
 
 file-ext-re = Regex(r'^(?P<root>.*)\.(?P<ext>[[:alnum:]]+)$')
 
@@ -45,6 +46,7 @@ fn main
 plugins = []
 
 string-setting-re = Regex(r'[[:space:]]*(?P<name>[[:alnum:]-]+)[[:space:]]*=[[:space:]]*"(?P<value>[^"]*)"')
+bool-setting-re = Regex(r'[[:space:]]*(?P<name>[[:alnum:]-]+)[[:space:]]*=[[:space:]]*(?P<value>true|false)')
 
 fn read-settings(path)
 	path = Path(path)
@@ -52,11 +54,13 @@ fn read-settings(path)
 		return
 	with file = File(path)
 		for line: file.lines
-			match = string-setting-re.match(line)
-			if !match
-				continue
-			if match["name"] == "airwindows-sources"
-				airwindows-sources = match["value"]
+			if match = string-setting-re.match(line)
+				if match["name"] == "airwindows-sources"
+					airwindows-sources = match["value"]
+			else if match = bool-setting-re.match(line)
+				value = (match["value"] == "true")
+				if match["name"] == "debug-unloading"
+					debug-unloading = value
 
 cxx = nil
 c-flags = [ "-I." "-fPIC" "-Wno-multichar" "-Wfatal-errors" ]
@@ -68,6 +72,8 @@ fn setup
 	cxx = env["CXX"] || "c++"
 	if !num-cores
 		num-cores = Int($(nproc))
+	if debug-unloading
+		c-flags.append("-DDEBUG_UNLOADING")
 
 create-effect-instance-re = Regex(r'createEffectInstance\(')
 
