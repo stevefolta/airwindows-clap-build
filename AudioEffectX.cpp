@@ -1,7 +1,10 @@
 #include "AudioEffectX.h"
 
 #include <vector>
+#include <sstream>
+#include <iostream>
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 
 
@@ -21,6 +24,22 @@ void AudioEffectX::dB2string(double value, char* dest, int size)
 	snprintf(dest, size, "%g", 20 * log10(value));
 }
 
+
+
+AudioEffectX::AudioEffectX(audioMasterCallback audio_master, int num_programs, int num_parameters_in)
+	: num_parameters(num_parameters_in),
+	param_values(num_parameters_in), param_mods(num_parameters_in)
+{
+}
+
+bool AudioEffectX::init()
+{
+	// Now that the subclasses ctor has been called, we can grab the initial
+	// parameter values.
+	for (int i = 0; i < num_parameters; ++i)
+		param_values[i] = getParameter(i);
+	return true;
+}
 
 
 static const char* const default_features[] = {
@@ -119,7 +138,23 @@ void AudioEffectX::process_event(const clap_event_header_t* event)
 
 	if (event->type == CLAP_EVENT_PARAM_VALUE) {
 		auto param_event = (const clap_event_param_value_t*) event;
-		setParameter(param_event->param_id, param_event->value);
+		if (param_event->note_id == -1 && param_event->port_index == -1 && param_event->channel == -1 && param_event->key == -1) {
+			auto param_id = param_event->param_id;
+			if (param_id < num_parameters) {
+				param_values[param_id] = param_event->value;
+				setParameter(param_id, param_values[param_id] + param_mods[param_id]);
+				}
+			}
+		}
+	else if (event->type == CLAP_EVENT_PARAM_MOD) {
+		auto mod_event = (const clap_event_param_mod_t*) event;
+		if (mod_event->note_id == -1 && mod_event->port_index == -1 && mod_event->channel == -1 && mod_event->key == -1) {
+			auto param_id = mod_event->param_id;
+			if (param_id < num_parameters) {
+				param_mods[param_id] = mod_event->amount;
+				setParameter(param_id, param_values[param_id] + param_mods[param_id]);
+				}
+			}
 		}
 }
 
@@ -215,7 +250,9 @@ void AudioEffectX::flush_parameters(const clap_input_events_t* in, const clap_ou
 bool AudioEffectX::get_param_info(uint32_t param_index, clap_param_info_t* param_info_out)
 {
 	param_info_out->id = param_index;
-	param_info_out->flags = CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_REQUIRES_PROCESS;
+	param_info_out->flags =
+		CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_MODULATABLE |
+		CLAP_PARAM_REQUIRES_PROCESS;
 	param_info_out->cookie = nullptr;
 	getParameterName(param_index, param_info_out->name);
 	param_info_out->module[0] = 0;
@@ -238,11 +275,21 @@ static const clap_plugin_state_t state_extension = {
 
 bool AudioEffectX::save_state(const clap_ostream_t* stream)
 {
-	void* chunk = nullptr;
-	auto num_bytes = getChunk(&chunk, false);
+	// We won't use getChunk()/setChunk(), because a) we need to save just the
+	// base parameter values, not the modded values, and b) those functions don't
+	// account for endianness, so projects can't be moved between machines that
+	// have differing endianness.  Instead, we'll save all parameters in
+	// plain-text.
+	std::ostringstream data;
+	for (int i = 0; i < num_parameters; ++i) {
+		if (i != 0)
+			data << ' ';
+		data << std::hexfloat << param_values[i];
+		}
 
-	const char* bytes = (char*) chunk;
-	int64_t bytes_left = num_bytes;
+	auto contents = data.str();
+	const char* bytes = contents.data();
+	int64_t bytes_left = contents.size();
 	while (bytes_left > 0) {
 		auto bytes_written = stream->write(stream, bytes, bytes_left);
 		if (bytes_written < 0)
@@ -251,29 +298,36 @@ bool AudioEffectX::save_state(const clap_ostream_t* stream)
 		bytes_left -= bytes_written;
 		}
 
-	free(chunk);
 	return bytes_left == 0;
 }
 
 bool AudioEffectX::load_state(const clap_istream_t* stream)
 {
-	// Read the whole chunk.
+	// Read the whole state.
 	std::vector<char> buffer(256);
-	std::vector<char> chunk;
+	std::vector<char> state;
 	while (true) {
 		auto bytes_read = stream->read(stream, buffer.data(), buffer.size());
 		if (bytes_read == 0)
 			break;
 		else if (bytes_read < 0)
 			return false;
-		chunk.insert(chunk.end(), buffer.begin(), std::next(buffer.begin(), bytes_read));
+		state.insert(state.end(), buffer.begin(), std::next(buffer.begin(), bytes_read));
 		}
 
-	// Airwindows plugs don't check the size of the data (they don't trust it).
-	// The validator requires that a size of zero return false anyway.
-	if (chunk.size() == 0)
-		return false;
-	setChunk(chunk.data(), chunk.size(), false);
+	// We can't use istringstream to read hex float values because GCC SUCKS AND
+	// IS BROKEN!  Use strtod() instead.
+	std::string contents(state.data(), state.size());
+	const char* p = contents.c_str();
+	for (int i = 0; i < num_parameters; ++i) {
+		if (*p == 0)
+			return false;
+		char* end = nullptr;
+		param_values[i] = strtod(p, &end);
+		p = end;
+		setParameter(i, param_values[i] + param_mods[i]);
+		}
+
 	return true;
 }
 

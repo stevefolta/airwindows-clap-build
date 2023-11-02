@@ -21,7 +21,7 @@ clap_plugin_descriptor_t* PluginEntry::get_descriptor()
 
 
 clap_plugin_t clap_plugin_template = {
-	.init = [](const clap_plugin_t* clap_plugin) -> bool { return true; },
+	.init = [](const clap_plugin_t* clap_plugin) -> bool { return AudioEffectX::of(clap_plugin)->init(); },
 	.destroy = [](const clap_plugin_t* clap_plugin) { delete AudioEffectX::of(clap_plugin); },
 	.activate = [](const clap_plugin_t* clap_plugin, double sample_rate, uint32_t min_frames, uint32_t max_frames) -> bool {
 		return AudioEffectX::of(clap_plugin)->activate(sample_rate, min_frames, max_frames);

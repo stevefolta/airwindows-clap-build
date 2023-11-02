@@ -3,6 +3,7 @@
 #include "clap/clap.h"
 #include <set>
 #include <string>
+#include <vector>
 #include <string.h>
 #include <stdint.h>
 
@@ -25,8 +26,8 @@ enum {
 
 class AudioEffectX {
 	public:
-		AudioEffectX(audioMasterCallback audio_master, int num_programs, int num_parameters_in)
-			: num_parameters(num_parameters_in) {}
+		AudioEffectX(audioMasterCallback audio_master, int num_programs, int num_parameters_in);
+		virtual bool init();
 		virtual ~AudioEffectX() {}
 
 		void setNumInputs(int new_num_inputs) { num_inputs = new_num_inputs; }
@@ -81,6 +82,8 @@ class AudioEffectX {
 		int num_inputs = 0, num_outputs = 0;
 		bool can_process_replacing = false, can_double_replacing = false;
 		double sample_rate = 44100;
+		std::vector<double> param_values;
+		std::vector<double> param_mods;
 
 		static void float2string(double value, char* dest, int size);
 		static void int2string(VstInt32 value, char* dest, int size);
