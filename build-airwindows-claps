@@ -5,6 +5,7 @@ airwindows-sources = nil
 file-ext-re = Regex(r'^(?P<root>.*)\.(?P<ext>[[:alnum:]]+)$')
 
 fn main
+	# Read the command line.
 	only = []
 	except = []
 	which_arg = 1
@@ -18,12 +19,15 @@ fn main
 			except.append(argv[which_arg])
 			which_arg += 1
 
+	# Read settings and set up.
 	read-settings("~/.config/build-airwindows-claps/settings")
 	read-settings("settings")
 	setup
 	if !airwindows-sources
 		fail('Configure "airwindows-sources" in your "settings" file.')
 	airwindows-sources = Path(airwindows-sources).string
+
+	# Gather the plugins.
 	for dir: glob("{airwindows-sources}/plugins/LinuxVST/src/*")
 		if !Path(dir).is-dir
 			continue
@@ -33,6 +37,8 @@ fn main
 		if except.contains(name)
 			continue
 		add-plugin(name)
+
+	# Build them.
 	build-all
 
 
@@ -142,8 +148,10 @@ class CompileQueue
 	init
 		pending = []
 		running = []
+
 	append(command, message)
 		pending.append(Entry(command, message))
+
 	run-all
 		# Start initial commands.
 		while pending.size > 0 && running.size < num-cores
