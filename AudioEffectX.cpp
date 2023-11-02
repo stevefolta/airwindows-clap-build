@@ -187,8 +187,10 @@ static const clap_plugin_params_t params_extension = {
 		// getParameterDisplay() will get the plugin's current value, instead of
 		// letting you pass a value in.
 		auto plugin = AudioEffectX::of(clap_plugin);
+		/* We could do this, but clap-validator doesn't like it:
 		if (value != plugin->getParameter(param_id))
 			return false;
+		*/
 		plugin->getParameterDisplay(param_id, out);
 		return true;
 		},
@@ -280,9 +282,9 @@ const void* AudioEffectX::get_extension(const char* id)
 {
 	if (strcmp(id, CLAP_EXT_AUDIO_PORTS) == 0)
 		return &audio_ports_extension;
-	else if (strcmp(id, CLAP_EXT_PARAMS) == 0)
+	else if (strcmp(id, CLAP_EXT_PARAMS) == 0 && num_parameters > 0)
 		return &params_extension;
-	else if (strcmp(id, CLAP_EXT_STATE) == 0)
+	else if (strcmp(id, CLAP_EXT_STATE) == 0 && num_parameters > 0)
 		return &state_extension;
 	return nullptr;
 }
