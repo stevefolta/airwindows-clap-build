@@ -40,9 +40,9 @@ void AudioEffectX::fill_descriptor(clap_plugin_descriptor_t* descriptor, std::se
 	getEffectName(name);
 	descriptor->name = intern_string(name);
 	descriptor->id = intern_string("com.airwindows." + std::string(name));
+	descriptor->url = intern_string("https://www.airwindows.com/" + std::string(name));
 	if (getVendorString(name))
 		descriptor->vendor = intern_string(name);
-	//*** TODO: URL.  Requires converting to lowercase.
 	//*** TODO: better features.
 	descriptor->features = default_features;
 }
