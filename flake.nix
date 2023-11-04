@@ -2,9 +2,10 @@
 	description = "Airwindows plugins in CLAP format";
 
 	inputs = {
+		sqs.url = "github:stevefolta/sqs";
 		};
 
-	outputs = { self, nixpkgs }:
+	outputs = { self, nixpkgs, sqs }:
 		let
 			plugin-name = "airwindows";
 
@@ -17,7 +18,9 @@
 					nixpkgsFor.${system}.stdenv.mkDerivation {
 						name = plugin-name;
 						src = self;
-						buildInputs = with nixpkgsFor.${system}; [ clap ];
+						buildInputs = with nixpkgsFor.${system}; [
+							clap sqs.packages.${system}.default
+							];
 						installPhase = ''
 							mkdir -p $out/bin
 							cp *.clap $out/bin/
