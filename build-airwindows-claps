@@ -189,10 +189,8 @@ class CompileQueue
 				i += 1
 			if all-done
 				break
-			# We ought to sleep a little here, and not just spin consuming CPU, but
-			# sqs won't let us sleep for less then a second, and that's too long to
-			# wait.
-			# sleep(1)
+			# Sleep just a little, so as not to just spin consuming CPU.
+			sleep(0.1)
 
 main()
 
