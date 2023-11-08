@@ -172,7 +172,9 @@ static const std::vector<clap_audio_port_info_t> audio_in_ports = {
 	{
 		.id = 0,
 		.name = "in",
-		.flags = CLAP_AUDIO_PORT_IS_MAIN | CLAP_AUDIO_PORT_SUPPORTS_64BITS,
+		.flags =
+			CLAP_AUDIO_PORT_IS_MAIN |
+			CLAP_AUDIO_PORT_SUPPORTS_64BITS | CLAP_AUDIO_PORT_PREFERS_64BITS,
 		.channel_count = 2,
 		.port_type = CLAP_PORT_STEREO,
 		.in_place_pair = 0,
@@ -182,7 +184,9 @@ static const std::vector<clap_audio_port_info_t> audio_out_ports = {
 	{
 		.id = 0,
 		.name = "out",
-		.flags = CLAP_AUDIO_PORT_IS_MAIN | CLAP_AUDIO_PORT_SUPPORTS_64BITS,
+		.flags =
+			CLAP_AUDIO_PORT_IS_MAIN |
+			CLAP_AUDIO_PORT_SUPPORTS_64BITS | CLAP_AUDIO_PORT_PREFERS_64BITS,
 		.channel_count = 2,
 		.port_type = CLAP_PORT_STEREO,
 		.in_place_pair = 0,
