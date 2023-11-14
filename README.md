@@ -9,6 +9,7 @@ contains all the plugins.
 ### Dependencies
 
 [The Airwindows sources](https://github.com/airwindows/airwindows) (of course)  
+[The CLAP headers](https://github.com/free-audio/clap)  
 [sqs](https://github.com/stevefolta/sqs)
 
 
