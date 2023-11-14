@@ -17,14 +17,14 @@ contains all the plugins.
 
 Create a settings file to tell the script where the Airwindows sources are.
 This can either be at
-"~/.config/build-airwindows-claps/settings", or just a file called "settings"
+"~/.config/build-airwindows-clap/settings", or just a file called "settings"
 in the current working directory.  An example:
 
 ```
 airwindows-sources = "~/local/src/airwindows"
 ```
 
-Then just run the "build-airwindows-claps" script.  You can give it optional
+Then just run the "build-airwindows-clap" script.  You can give it optional
 arguments to build only one plugin (`build-airwindows-clap only: Capacitor`) or
 to exclude plugins (`build-airwindows-clap except: DrumSlam except: DustBunny`).
 

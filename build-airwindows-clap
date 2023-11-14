@@ -21,7 +21,7 @@ fn main
 			which_arg += 1
 
 	# Read settings and set up.
-	read-settings("~/.config/build-airwindows-claps/settings")
+	read-settings("~/.config/build-airwindows-clap/settings")
 	read-settings("settings")
 	setup
 	if !airwindows-sources
