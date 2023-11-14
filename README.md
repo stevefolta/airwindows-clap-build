@@ -13,7 +13,7 @@ contains all the plugins.
 [sqs](https://github.com/stevefolta/sqs)
 
 
-# Using it
+### Using it
 
 Create a settings file to tell the script where the Airwindows sources are.
 This can either be at
